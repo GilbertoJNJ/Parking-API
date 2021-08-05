@@ -1,119 +1,145 @@
 package com.gilberto.parkingapi.controller;
 
+import com.gilberto.parkingapi.builder.AreaDTOBuilder;
+import com.gilberto.parkingapi.dto.AreaDTO;
+import com.gilberto.parkingapi.exception.AreaNotFoundException;
+import com.gilberto.parkingapi.service.ParkingService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultMatcher;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.servlet.view.json.MappingJackson2JsonView;
+
+import java.util.Collections;
+
+import static com.gilberto.parkingapi.utils.JsonConvertionUtils.asJsonString;
+import static org.hamcrest.core.Is.is;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 @ExtendWith(MockitoExtension.class)
 public class ParkingControllerTest {
 
-    private static final String BEER_API_URL_PATH = "/api/v1/beers";
-    private static final long VALID_BEER_ID = 1L;
-    private static final long INVALID_BEER_ID = 2l;
-    private static final String BEER_API_SUBPATH_INCREMENT_URL = "/increment";
-    private static final String BEER_API_SUBPATH_DECREMENT_URL = "/decrement";
+    private static final String AREA_API_URL_PATH = "/api/v1/areas";
+    private static final long VALID_AREA_ID = 1L;
+    private static final long INVALID_AREA_ID = 2l;
+    private static final String AREA_API_SUBPATH_INCREMENT_URL = "/increment";
+    private static final String AREA_API_SUBPATH_DECREMENT_URL = "/decrement";
 
     private MockMvc mockMvc;
 
     @Mock
-    private BeerService beerService;
+    private ParkingService parkingService;
 
     @InjectMocks
-    private BeerController beerController;
+    private ParkingController parkingController;
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(beerController)
+        mockMvc = MockMvcBuilders.standaloneSetup(parkingController)
                 .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
                 .setViewResolvers((s, locale) -> new MappingJackson2JsonView())
                 .build();
     }
 
     @Test
-    void whenPOSTIsCalledThenABeerIsCreated() throws Exception {
+    void whenPOSTIsCalledThenAAreaIsCreated() throws Exception {
         // given
-        BeerDTO beerDTO = BeerDTOBuilder.builder().build().toBeerDTO();
+        AreaDTO areaDTO = AreaDTOBuilder.builder().build().toAreaDTO();
 
         // when
-        when(beerService.createBeer(beerDTO)).thenReturn(beerDTO);
+        when(parkingService.createArea(areaDTO)).thenReturn(areaDTO);
 
         // then
-        mockMvc.perform(post(BEER_API_URL_PATH)
+        mockMvc.perform(post(AREA_API_URL_PATH)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(asJsonString(beerDTO)))
+                .content(asJsonString(areaDTO)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.name", is(beerDTO.getName())))
-                .andExpect(jsonPath("$.brand", is(beerDTO.getBrand())))
-                .andExpect(jsonPath("$.type", is(beerDTO.getType().toString())));
+                .andExpect(jsonPath("$.name", is(areaDTO.getName())))
+                .andExpect(jsonPath("$.parkingType", is(areaDTO.getParkingType())));
     }
 
     @Test
     void whenPOSTIsCalledWithoutRequiredFieldThenAnErrorIsReturned() throws Exception {
         // given
-        BeerDTO beerDTO = BeerDTOBuilder.builder().build().toBeerDTO();
-        beerDTO.setBrand(null);
+        AreaDTO areaDTO = AreaDTOBuilder.builder().build().toAreaDTO();
+        areaDTO.setName(null);
 
         // then
-        mockMvc.perform(post(BEER_API_URL_PATH)
+        mockMvc.perform(post(AREA_API_URL_PATH)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(asJsonString(beerDTO)))
+                .content(asJsonString(areaDTO)))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void whenGETIsCalledWithValidNameThenOkStatusIsReturned() throws Exception {
         // given
-        BeerDTO beerDTO = BeerDTOBuilder.builder().build().toBeerDTO();
+        AreaDTO areaDTO = AreaDTOBuilder.builder().build().toAreaDTO();
 
         //when
-        when(beerService.findByName(beerDTO.getName())).thenReturn(beerDTO);
+        when(parkingService.findByName(areaDTO.getName())).thenReturn(areaDTO);
 
         // then
-        mockMvc.perform(MockMvcRequestBuilders.get(BEER_API_URL_PATH + "/" + beerDTO.getName())
+        mockMvc.perform(MockMvcRequestBuilders.get(AREA_API_URL_PATH + "/" + areaDTO.getName())
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name", is(beerDTO.getName())))
-                .andExpect(jsonPath("$.brand", is(beerDTO.getBrand())))
-                .andExpect(jsonPath("$.type", is(beerDTO.getType().toString())));
+                .andExpect((ResultMatcher) jsonPath("$.name", is(areaDTO.getName())))
+                .andExpect((ResultMatcher) jsonPath("$.parkingType", is(areaDTO.getParkingType().toString())));
     }
 
     @Test
     void whenGETIsCalledWithoutRegisteredNameThenNotFoundStatusIsReturned() throws Exception {
         // given
-        BeerDTO beerDTO = BeerDTOBuilder.builder().build().toBeerDTO();
+        AreaDTO areaDTO = AreaDTOBuilder.builder().build().toAreaDTO();
 
         //when
-        when(beerService.findByName(beerDTO.getName())).thenThrow(BeerNotFoundException.class);
+        when(parkingService.findByName(areaDTO.getName())).thenThrow(AreaNotFoundException.class);
 
         // then
-        mockMvc.perform(MockMvcRequestBuilders.get(BEER_API_URL_PATH + "/" + beerDTO.getName())
+        mockMvc.perform(MockMvcRequestBuilders.get(AREA_API_URL_PATH + "/" + areaDTO.getName())
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
     }
 
     @Test
-    void whenGETListWithBeersIsCalledThenOkStatusIsReturned() throws Exception {
+    void whenGETListWithAreasIsCalledThenOkStatusIsReturned() throws Exception {
         // given
-        BeerDTO beerDTO = BeerDTOBuilder.builder().build().toBeerDTO();
+        AreaDTO areaDTO = AreaDTOBuilder.builder().build().toAreaDTO();
 
         //when
-        when(beerService.listAll()).thenReturn(Collections.singletonList(beerDTO));
+        when(parkingService.listAll()).thenReturn(Collections.singletonList(areaDTO));
 
         // then
-        mockMvc.perform(MockMvcRequestBuilders.get(BEER_API_URL_PATH)
+        mockMvc.perform(MockMvcRequestBuilders.get(AREA_API_URL_PATH)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].name", is(beerDTO.getName())))
-                .andExpect(jsonPath("$[0].brand", is(beerDTO.getBrand())))
-                .andExpect(jsonPath("$[0].type", is(beerDTO.getType().toString())));
+                .andExpect((ResultMatcher) jsonPath("$[0].name", is(areaDTO.getName())))
+                .andExpect((ResultMatcher) jsonPath("$[0].type", is(areaDTO.getParkingType().toString())));
     }
 
     @Test
-    void whenGETListWithoutBeersIsCalledThenOkStatusIsReturned() throws Exception {
+    void whenGETListWithoutAreasIsCalledThenOkStatusIsReturned() throws Exception {
         // given
-        BeerDTO beerDTO = BeerDTOBuilder.builder().build().toBeerDTO();
+        AreaDTO areaDTO = AreaDTOBuilder.builder().build().toAreaDTO();
 
         //when
-        when(beerService.listAll()).thenReturn(Collections.singletonList(beerDTO));
+        when(parkingService.listAll()).thenReturn(Collections.singletonList(areaDTO));
 
         // then
-        mockMvc.perform(MockMvcRequestBuilders.get(BEER_API_URL_PATH)
+        mockMvc.perform(MockMvcRequestBuilders.get(AREA_API_URL_PATH)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
     }
@@ -121,13 +147,13 @@ public class ParkingControllerTest {
     @Test
     void whenDELETEIsCalledWithValidIdThenNoContentStatusIsReturned() throws Exception {
         // given
-        BeerDTO beerDTO = BeerDTOBuilder.builder().build().toBeerDTO();
+        AreaDTO areaDTO = AreaDTOBuilder.builder().build().toAreaDTO();
 
         //when
-        doNothing().when(beerService).deleteById(beerDTO.getId());
+        doNothing().when(parkingService).deleteById(areaDTO.getId());
 
         // then
-        mockMvc.perform(MockMvcRequestBuilders.delete(BEER_API_URL_PATH + "/" + beerDTO.getId())
+        mockMvc.perform(MockMvcRequestBuilders.delete(AREA_API_URL_PATH + "/" + areaDTO.getId())
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNoContent());
     }
@@ -135,10 +161,12 @@ public class ParkingControllerTest {
     @Test
     void whenDELETEIsCalledWithInvalidIdThenNotFoundStatusIsReturned() throws Exception {
         //when
-        doThrow(BeerNotFoundException.class).when(beerService).deleteById(INVALID_BEER_ID);
+        doThrow(AreaNotFoundException.class).when(parkingService).deleteById(INVALID_AREA_ID);
 
         // then
-        mockMvc.perform(MockMvcRequestBuilders.delete(BEER_API_URL_PATH + "/" + INVALID_BEER_ID)
+        mockMvc.perform(MockMvcRequestBuilders.delete(AREA_API_URL_PATH + "/" + INVALID_AREA_ID)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
     }
+
+}

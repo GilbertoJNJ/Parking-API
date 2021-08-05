@@ -1,116 +1,144 @@
 package com.gilberto.parkingapi.service;
 
+import com.gilberto.parkingapi.builder.AreaDTOBuilder;
+import com.gilberto.parkingapi.dto.AreaDTO;
+import com.gilberto.parkingapi.entity.Area;
+import com.gilberto.parkingapi.exception.AreaAlreadyRegisteredException;
+import com.gilberto.parkingapi.exception.AreaNotFoundException;
+import com.gilberto.parkingapi.mapper.AreaMapper;
+import com.gilberto.parkingapi.repository.ParkingRepository;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 @ExtendWith(MockitoExtension.class)
 public class ParkingServiceTest {
 
-    private static final long INVALID_BEER_ID = 1L;
+    private static final long INVALID_AREA_ID = 1L;
 
     @Mock
-    private BeerRepository beerRepository;
+    private ParkingRepository parkingRepository;
 
-    private BeerMapper beerMapper = BeerMapper.INSTANCE;
+    private AreaMapper areaMapper = AreaMapper.INSTANCE;
 
     @InjectMocks
-    private BeerService beerService;
+    private ParkingService parkingService;
 
     @Test
-    void whenBeerInformedThenItShouldBeCreated() throws BeerAlreadyRegisteredException {
+    void whenAreaInformedThenItShouldBeCreated() throws AreaAlreadyRegisteredException {
         // given
-        BeerDTO expectedBeerDTO = BeerDTOBuilder.builder().build().toBeerDTO();
-        Beer expectedSavedBeer = beerMapper.toModel(expectedBeerDTO);
+        AreaDTO expectedAreaDTO = AreaDTOBuilder.builder().build().toAreaDTO();
+        Area expectedSavedArea = areaMapper.toModel(expectedAreaDTO);
 
         // when
-        when(beerRepository.findByName(expectedBeerDTO.getName())).thenReturn(Optional.empty());
-        when(beerRepository.save(expectedSavedBeer)).thenReturn(expectedSavedBeer);
+        when(parkingRepository.findByName(expectedAreaDTO.getName())).thenReturn(Optional.empty());
+        when(parkingRepository.save(expectedSavedArea)).thenReturn(expectedSavedArea);
 
         //then
-        BeerDTO createdBeerDTO = beerService.createBeer(expectedBeerDTO);
+        AreaDTO createdAreaDTO = parkingService.createArea(expectedAreaDTO);
 
-        assertThat(createdBeerDTO.getId(), is(equalTo(expectedBeerDTO.getId())));
-        assertThat(createdBeerDTO.getName(), is(equalTo(expectedBeerDTO.getName())));
-        assertThat(createdBeerDTO.getQuantity(), is(equalTo(expectedBeerDTO.getQuantity())));
+        assertThat(createdAreaDTO.getId(), is(equalTo(expectedAreaDTO.getId())));
+        assertThat(createdAreaDTO.getName(), is(equalTo(expectedAreaDTO.getName())));
+        assertThat(createdAreaDTO.getQuantity(), is(equalTo(expectedAreaDTO.getQuantity())));
     }
 
     @Test
-    void whenAlreadyRegisteredBeerInformedThenAnExceptionShouldBeThrown() {
+    void whenAlreadyRegisteredAreaInformedThenAnExceptionShouldBeThrown() {
         // given
-        BeerDTO expectedBeerDTO = BeerDTOBuilder.builder().build().toBeerDTO();
-        Beer duplicatedBeer = beerMapper.toModel(expectedBeerDTO);
+        AreaDTO expectedAreaDTO = AreaDTOBuilder.builder().build().toAreaDTO();
+        Area duplicatedArea = areaMapper.toModel(expectedAreaDTO);
 
         // when
-        when(beerRepository.findByName(expectedBeerDTO.getName())).thenReturn(Optional.of(duplicatedBeer));
+        when(parkingRepository.findByName(expectedAreaDTO.getName())).thenReturn(Optional.of(duplicatedArea));
 
         // then
-        assertThrows(BeerAlreadyRegisteredException.class, () -> beerService.createBeer(expectedBeerDTO));
+        assertThrows(AreaAlreadyRegisteredException.class, () -> parkingService.createArea(expectedAreaDTO));
     }
 
     @Test
-    void whenValidBeerNameIsGivenThenReturnABeer() throws BeerNotFoundException {
+    void whenValidAreaNameIsGivenThenReturnAnArea() throws AreaNotFoundException {
         // given
-        BeerDTO expectedFoundBeerDTO = BeerDTOBuilder.builder().build().toBeerDTO();
-        Beer expectedFoundBeer = beerMapper.toModel(expectedFoundBeerDTO);
+        AreaDTO expectedFoundAreaDTO = AreaDTOBuilder.builder().build().toAreaDTO();
+        Area expectedFoundArea = areaMapper.toModel(expectedFoundAreaDTO);
 
         // when
-        when(beerRepository.findByName(expectedFoundBeer.getName())).thenReturn(Optional.of(expectedFoundBeer));
+        when(parkingRepository.findByName(expectedFoundAreaDTO.getName())).thenReturn(Optional.of(expectedFoundArea));
 
         // then
-        BeerDTO foundBeerDTO = beerService.findByName(expectedFoundBeerDTO.getName());
+        AreaDTO foundAreaDTO = parkingService.findByName(expectedFoundAreaDTO.getName());
 
-        assertThat(foundBeerDTO, is(equalTo(expectedFoundBeerDTO)));
+        assertThat(foundAreaDTO, is(equalTo(expectedFoundAreaDTO)));
     }
 
     @Test
-    void whenNotRegisteredBeerNameIsGivenThenThrowAnException() {
+    void whenNotRegisteredAreaNameIsGivenThenThrowAnException() {
         // given
-        BeerDTO expectedFoundBeerDTO = BeerDTOBuilder.builder().build().toBeerDTO();
+        AreaDTO expectedFoundAreaDTO = AreaDTOBuilder.builder().build().toAreaDTO();
 
         // when
-        when(beerRepository.findByName(expectedFoundBeerDTO.getName())).thenReturn(Optional.empty());
+        when(parkingRepository.findByName(expectedFoundAreaDTO.getName())).thenReturn(Optional.empty());
 
         // then
-        assertThrows(BeerNotFoundException.class, () -> beerService.findByName(expectedFoundBeerDTO.getName()));
+        assertThrows(AreaNotFoundException.class, () -> parkingService.findByName(expectedFoundAreaDTO.getName()));
     }
 
     @Test
-    void whenListBeerIsCalledThenReturnAListOfBeers() {
+    void whenListAreaIsCalledThenReturnAListOfAreas() {
         // given
-        BeerDTO expectedFoundBeerDTO = BeerDTOBuilder.builder().build().toBeerDTO();
-        Beer expectedFoundBeer = beerMapper.toModel(expectedFoundBeerDTO);
+        AreaDTO expectedFoundAreaDTO = AreaDTOBuilder.builder().build().toAreaDTO();
+        Area expectedFoundArea = areaMapper.toModel(expectedFoundAreaDTO);
 
         //when
-        when(beerRepository.findAll()).thenReturn(Collections.singletonList(expectedFoundBeer));
+        when(parkingRepository.findAll()).thenReturn(Collections.singletonList(expectedFoundArea));
 
         //then
-        List<BeerDTO> foundListBeersDTO = beerService.listAll();
+        List<AreaDTO> foundListAreasDTO = parkingService.listAll();
 
-        assertThat(foundListBeersDTO, is(not(empty())));
-        assertThat(foundListBeersDTO.get(0), is(equalTo(expectedFoundBeerDTO)));
+        assertThat(foundListAreasDTO, is(not(empty())));
+        assertThat(foundListAreasDTO.get(0), is(equalTo(expectedFoundAreaDTO)));
     }
 
     @Test
-    void whenListBeerIsCalledThenReturnAnEmptyListOfBeers() {
+    void whenListAreaIsCalledThenReturnAnEmptyListOfAreas() {
         //when
-        when(beerRepository.findAll()).thenReturn(Collections.EMPTY_LIST);
+        when(parkingRepository.findAll()).thenReturn(Collections.EMPTY_LIST);
 
         //then
-        List<BeerDTO> foundListBeersDTO = beerService.listAll();
+        List<AreaDTO> foundListBeersDTO = parkingService.listAll();
 
         assertThat(foundListBeersDTO, is(empty()));
     }
 
     @Test
-    void whenExclusionIsCalledWithValidIdThenABeerShouldBeDeleted() throws BeerNotFoundException{
+    void whenExclusionIsCalledWithValidIdThenAnAreaShouldBeDeleted() throws AreaNotFoundException {
         // given
-        BeerDTO expectedDeletedBeerDTO = BeerDTOBuilder.builder().build().toBeerDTO();
-        Beer expectedDeletedBeer = beerMapper.toModel(expectedDeletedBeerDTO);
+        AreaDTO expectedDeletedAreaDTO = AreaDTOBuilder.builder().build().toAreaDTO();
+        Area expectedDeletedArea = areaMapper.toModel(expectedDeletedAreaDTO);
 
         // when
-        when(beerRepository.findById(expectedDeletedBeerDTO.getId())).thenReturn(Optional.of(expectedDeletedBeer));
-        doNothing().when(beerRepository).deleteById(expectedDeletedBeerDTO.getId());
+        when(parkingRepository.findById(expectedDeletedAreaDTO.getId())).thenReturn(Optional.of(expectedDeletedArea));
+        doNothing().when(parkingRepository).deleteById(expectedDeletedAreaDTO.getId());
 
         // then
-        beerService.deleteById(expectedDeletedBeerDTO.getId());
+        parkingService.deleteById(expectedDeletedAreaDTO.getId());
 
-        verify(beerRepository, times(1)).findById(expectedDeletedBeerDTO.getId());
-        verify(beerRepository, times(1)).deleteById(expectedDeletedBeerDTO.getId());
+        verify(parkingRepository, times(1)).findById(expectedDeletedAreaDTO.getId());
+        verify(parkingRepository, times(1)).deleteById(expectedDeletedAreaDTO.getId());
     }
+
+}
